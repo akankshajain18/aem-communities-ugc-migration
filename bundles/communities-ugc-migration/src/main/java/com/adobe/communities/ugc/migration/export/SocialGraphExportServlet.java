@@ -11,7 +11,6 @@
  **************************************************************************/
 package com.adobe.communities.ugc.migration.export;
 
-import com.adobe.communities.ugc.migration.util.Constants;
 import com.adobe.cq.social.graph.SocialGraph;
 import com.adobe.cq.social.graph.Vertex;
 import com.adobe.granite.socialgraph.Direction;
@@ -70,37 +69,11 @@ public class SocialGraphExportServlet extends SlingSafeMethodsServlet {
         }
         if(relType == null){
         	logger.error("relType parameters us not present. Exiting");
-        	throw new ServletException("relType parameters us not present. Exiting");
+        	throw new ServletException("relType parameters is not present. Exiting");
         }else if(typeS ==null){
             logger.error("typeS parameters us not present. Exiting");
-            throw new ServletException("typeSO37\n" +
-                    "518Adobe-Marketing-Cloud/aem-communities-ugc-migration\n" +
-                    " Code Issues 3 Pull requests 2 Projects 0 Wiki Security Insights\n" +
-                    "CQ-4279355 export code for migration from MSRP to ASRP. #25\n" +
-                    " Open\tabhishekgarg18 wants to merge 2 commits into Adobe-Marketing-Cloud:master from abhishekgarg18:dev_msrp_asrp_migration\n" +
-                    "+976 −15 \n" +
-                    " Conversation 20  Commits 2  Checks 0  Files changed 10\n" +
-                    " Open\n" +
-                    "CQ-4279355 export code for migration from MSRP to ASRP. #25\n" +
-                    "File filter... \n" +
-                    "0 / 8 files viewed\n" +
-                    " 137  ...ation/src/main/java/com/adobe/communities/ugc/migration/export/ActivityExportServlet.java \n" +
-                    "Viewed\n" +
-                    "@@ -0,0 +1,137 @@\n" +
-                    "Multi-line comments are here!\n" +
-                    "\n" +
-                    "You can now comment on multiple lines. Just click and drag on the  button.\n" +
-                    "\n" +
-                    "Demonstrating selecting multiple lines for commenting\n" +
-                    "\n" +
-                    "package com.adobe.communities.ugc.migration.export;\n" +
-                    "\n" +
-                    "import com.adobe.communities.ugc.migration.util.Constants;\n" +
-                    "import com.adobe.cq.social.activitystreams.api.SocialActivityManager;\n" +
-                    "import com.adobe.cq.social.activitystreams.api.SocialActivityStream;\n" +
-                    "import com.adobe.cq.social.scf.ClientUtilityFactory; parameters us not present. Exiting");
+            throw new ServletException("typeS parameters is not present. Exiting");
         }
-
 
         final Resource userRoot = request.getResourceResolver().getResource(path);
         if (null == userRoot) {
@@ -124,8 +97,6 @@ public class SocialGraphExportServlet extends SlingSafeMethodsServlet {
 
             FileOutputStream fos = new FileOutputStream(outFile);
             BufferedOutputStream bos = new BufferedOutputStream(fos);
-            //loadMap(request) ;
-
 
             OutputStream outStream = null;
             InputStream inStream = null;
