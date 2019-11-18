@@ -10,17 +10,15 @@ import org.apache.commons.lang.StringUtils;
 import org.apache.sling.api.request.RequestParameter;
 import org.apache.sling.api.servlets.SlingAllMethodsServlet;
 import org.apache.sling.commons.json.JSONArray;
-import org.apache.sling.commons.json.JSONException;
 import org.apache.sling.commons.json.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.BufferedReader;
-import java.io.DataInputStream;
-import java.io.InputStream;
-import java.io.InputStreamReader;
+import java.io.*;
 import java.nio.charset.Charset;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 
@@ -45,44 +43,46 @@ public abstract class  UGCImport extends SlingAllMethodsServlet {
                 String newUrl = objectNewMapping.get(Constants.ENTITY_URL);
                 String referer = objectNewMapping.get(Constants.REFERER);
 
-                if(StringUtils.isNotBlank(newId)){
-                    jsonObject.put(Constants.OBJECT_ID, newId) ;
+                if(StringUtils.isNotBlank(newId)) {
+                    jsonObject.put(Constants.OBJECT_ID, newId);
                     objectMap.put(Constants.ID, newId);
 
-                    if(targetMap.has(Constants.LATESTACTIVITYPATH_S)){
+                    if (targetMap.has(Constants.LATESTACTIVITYPATH_S)) {
                         targetMap.put(Constants.LATESTACTIVITYPATH_S, newId);
                     }
+
+
+                    if (StringUtils.isNotBlank(newUrl)) {
+                        objectMap.put(Constants.URL, findString(newUrl, Constants.CONTENT));
+                    }
+
+                    if (StringUtils.isNotBlank(referer)) {
+                        objectMap.put(Constants.REFERER, referer);
+                        objectMap.put(Constants.Referer, referer);
+                    }
+
+                    String oldTargetId = targetMap.optString(Constants.ID);
+                    Map<String, String> targetNewMapping = getNewMapping(idMap, oldTargetId);
+
+                    String targetId = targetNewMapping.get(Constants.NEW_ID);
+                    String targetUrl = targetNewMapping.get(Constants.ENTITY_URL);
+
+                    if (StringUtils.isNotBlank(targetId)) {
+                        targetMap.put(Constants.ID, targetId);
+                    }
+
+                    if (StringUtils.isNotBlank(targetUrl)) {
+                        targetMap.put(Constants.URL, findString(targetUrl, Constants.CONTENT));
+                    }
+
+                    jsonObject.put(Constants.OBJECT, objectMap);
+                    jsonObject.put(Constants.TARGET, targetMap);
+                }else{
+                    return null;
                 }
-
-                if(StringUtils.isNotBlank(newUrl)) {
-                    objectMap.put(Constants.URL, findString(newUrl, Constants.CONTENT));
-                }
-
-                if(StringUtils.isNotBlank(referer)){
-                    objectMap.put(Constants.REFERER, referer);
-                    objectMap.put(Constants.Referer, referer);
-                }
-
-                String oldTargetId = targetMap.optString(Constants.ID);
-                Map<String,String>  targetNewMapping = getNewMapping(idMap, oldTargetId);
-
-                String targetId = targetNewMapping.get(Constants.NEW_ID);
-                String targetUrl = targetNewMapping.get(Constants.ENTITY_URL);
-
-                if (StringUtils.isNotBlank(targetId)) {
-                    targetMap.put(Constants.ID, targetId);
-                }
-
-                if(StringUtils.isNotBlank(targetUrl)) {
-                    targetMap.put(Constants.URL, findString(targetUrl, Constants.CONTENT));
-                }
-
-                jsonObject.put(Constants.OBJECT,objectMap) ;
-                jsonObject.put(Constants.TARGET,targetMap) ;
             }else{
-                logger.info("Below activity data is incomplete\n[{}], Hence ignoring it ", jsonObject);
+                return null;
             }
-
             return jsonObject;
 
         } catch (Exception e) {
@@ -112,7 +112,7 @@ public abstract class  UGCImport extends SlingAllMethodsServlet {
     }
 
 
-     Map<String, Map<String,String>> loadMetaInfo(final RequestParameter requestParam){
+    Map<String, Map<String,String>> loadKeyMetaInfo(final RequestParameter requestParam){
         Map<String,Map<String,String>> idMap = new HashMap() ;
 
         InputStream inputStream = null;
@@ -129,7 +129,7 @@ public abstract class  UGCImport extends SlingAllMethodsServlet {
                     String values[] = keyValues[1].split(",") ;
 
                     Map<String,String> valuesMap = new HashMap<String, String>()  ;
-                    if(values.length >= 2) {
+                    if(values.length >=2) {
                         valuesMap.put(Constants.NEW_ID, values[0]);
                         valuesMap.put(Constants.ENTITY_URL, values[1]);
                         valuesMap.put(Constants.REFERER, values[2]);
@@ -152,40 +152,106 @@ public abstract class  UGCImport extends SlingAllMethodsServlet {
         return idMap;
     }
 
-    void importUGC(JSONArray activities, ActivityStreamProvider streamProvider, SocialActivityManager activityManager, Map<String,Map<String,String>> idMap, int start) {
-       int  toStart = start;
-       try {
-           for (; toStart < activities.length(); toStart++) {
-               JSONObject activityJson = activities.getJSONObject(toStart);
-               JSONObject updatedJson = getUpdateJsonObjectWithNewIDs(idMap, activityJson);
-               final Activity activity = activityManager.newActivity(updatedJson);
-               if (activity != null) {
-                   if (streamProvider.accept(activity)) {
-                       logger.debug("Appending activity id {}, Object id {} to streamProvider {}. Activity Before import[{}]\n, During processing[{}]\n", activity.getId(), activity.getObject().getId(),
-                               streamProvider.getClass().getName());
-                       streamProvider.append(activity);
-                   }
-               }
-           }
-       } catch (Exception e) {
-           throw new ActivityException("error during import", e);
-       } finally {
-           logger.info("Activity import metrics[Start: {}, end: {}, imported: {}]", start, toStart, (toStart - start));
-       }
+    List<Integer> loadSkippedMetaInfo(final RequestParameter requestParam){
+        List<Integer> toImport = new ArrayList<Integer>() ;
 
-   }
+        InputStream inputStream = null;
+        DataInputStream dataInputStream = null;
+        BufferedReader br = null;
+        try {
+            if (requestParam != null ) {
+                inputStream =requestParam.getInputStream();
+                dataInputStream = new DataInputStream(inputStream);
+                br = new BufferedReader(new InputStreamReader(dataInputStream));
+                String line;
+                while ((line = br.readLine()) != null) {
+                    toImport.add(Integer.parseInt(line));
+                }
+            }
+        }catch(Exception e){
+            logger.error("Unable to load meta file",e);
+        }finally {
+            if(br != null)
+                IOUtils.closeQuietly(br);
 
-   private Map<String,String> getNewMapping(Map<String, Map<String,String>> idMap, String key){
-       //<id, url, referer>
-       Map<String, String> map = idMap.get(key);
-       return map != null ? map:new HashMap<String, String>();
-   }
+            if(dataInputStream != null)
+                IOUtils.closeQuietly(dataInputStream);
 
-   private String findString(String str, String pattern){
+            if(inputStream != null)
+                IOUtils.closeQuietly(inputStream);
+        }
+        return toImport;
+    }
+
+    void importUGC(JSONArray activities, ActivityStreamProvider streamProvider, SocialActivityManager activityManager, Map<String, Map<String, String>> idMap, List<Integer> importInfo, int start, String filename) {
+
+        int toStart = start;
+        int skipped = 0;
+        int processedCount  =0;
+
+        FileWriter filewriter = null;
+        BufferedWriter bufferedWriter = null;
+        try {
+            filewriter = new FileWriter(Constants.SKIPPED + filename +".txt");
+            bufferedWriter = new BufferedWriter(filewriter);
+
+            for (; toStart < activities.length(); toStart++) {
+
+                //process when, either skippedlist is empty(fresh import) or data skipped in previous import
+                if(importInfo.isEmpty() || importInfo.contains(toStart)) {
+                    processedCount++;
+                    JSONObject activityJson = activities.getJSONObject(toStart);
+                    JSONObject updatedJson = getUpdateJsonObjectWithNewIDs(idMap, activityJson);
+                    if (updatedJson != null) {
+                        final Activity activity = activityManager.newActivity(updatedJson);
+                        if (activity != null) {
+                            if (streamProvider.accept(activity)) {
+                                logger.debug("Appending activity id {}, Object id {} to streamProvider {}. Activity Before import[{}]\n, During processing[{}]\n", activity.getId(), activity.getObject().getId(),
+                                        streamProvider.getClass().getSimpleName(), activityJson, updatedJson);
+                                streamProvider.append(activity);
+                            }
+                        }
+                    } else {
+                        logger.warn("[Skipped] Either below activity[{}] data is incomplete or corresponding UGC is not imported, Hence ignoring it \n", activityJson);
+                        bufferedWriter.write(toStart + "");
+                        bufferedWriter.newLine();
+                        skipped++;
+                    }
+
+                    importInfo.remove(toStart);
+                }
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        } catch (Exception e) {
+            throw new ActivityException("error during import", e);
+        } finally {
+            if(bufferedWriter != null) {
+                IOUtils.closeQuietly(bufferedWriter);
+            }
+            if(filewriter != null){
+                IOUtils.closeQuietly(filewriter);
+            }
+            logger.info("Activity import metrics[Start: {}, end: {}, imported: {}, skipped: {}]", start, toStart, (processedCount - skipped), skipped);
+        }
+
+    }
+
+    private Map<String,String> getNewMapping(Map<String, Map<String,String>> idMap, String key){
+        //<id, url, referer>
+        Map<String, String> map = idMap.get(key);
+        return map != null ? map:new HashMap<String, String>();
+    }
+
+    private String findString(String str, String pattern){
         int index = str.indexOf(pattern);
         if(index != -1){
             str = str.substring(index);
         }
         return str;
-   }
+    }
+
+    private void updateSkip(){
+
+    }
 }

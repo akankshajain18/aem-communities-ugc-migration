@@ -12,6 +12,7 @@ public class Constants {
 
     public static final String ID_MAPPING_FILE = "idMapping";
     public static final String DATA_FILE = "data";
+    public static final String TO_IMPORT_FILE = "toImport";
 
     public static  final String START = "start";
 
@@ -27,5 +28,7 @@ public class Constants {
 
     public static final String ENTITY_URL = "entity_url";
     public static final String NEW_ID = "new_id" ;
+
+    public static final String SKIPPED = "skipped";
 
 }
