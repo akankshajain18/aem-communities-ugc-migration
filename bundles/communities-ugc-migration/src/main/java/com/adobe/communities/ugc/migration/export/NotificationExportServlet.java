@@ -14,7 +14,6 @@ import org.apache.commons.io.IOUtils;
 import org.apache.felix.scr.annotations.*;
 import org.apache.sling.api.SlingHttpServletRequest;
 import org.apache.sling.api.SlingHttpServletResponse;
-import org.apache.sling.api.resource.Resource;
 import org.apache.sling.api.resource.ResourceResolver;
 import org.apache.sling.api.servlets.SlingAllMethodsServlet;
 import org.apache.sling.commons.json.io.JSONWriter;
@@ -51,7 +50,6 @@ public class NotificationExportServlet extends SlingAllMethodsServlet {
 
     protected void doGet(final SlingHttpServletRequest request, final SlingHttpServletResponse response)
             throws ServletException, IOException {
-        Resource resource = request.getResource();
 
         File outFile = null ;
         try {
@@ -66,8 +64,6 @@ public class NotificationExportServlet extends SlingAllMethodsServlet {
 
             FileOutputStream fos = new FileOutputStream(outFile);
             BufferedOutputStream bos = new BufferedOutputStream(fos);
-            //loadMap(request) ;
-
 
             OutputStream outStream = null;
             InputStream inStream = null;

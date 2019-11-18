@@ -103,7 +103,7 @@ public class ActivityExportServlet extends SlingAllMethodsServlet {
                     jsonWriter.object();
                     jsonWriter.key(Constants.ACTIVITIES);
                     jsonWriter.array();
-                    Integer readCount = 0;
+                    Integer readCount;
                     Integer index = 0;
                     do {
                         readCount = 0;

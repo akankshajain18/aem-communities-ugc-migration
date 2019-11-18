@@ -15,6 +15,7 @@ import org.apache.sling.commons.json.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.List;
 import java.util.Map;
 
 @Component(label = "UGC Migration Activity Importer",
@@ -42,7 +43,10 @@ public class ActivityImportServlet extends UGCImport {
 
         //read meta data
         RequestParameter metaFileParam = paramMap.getValue(Constants.ID_MAPPING_FILE);
-        Map<String, Map<String, String>> idMap = loadMetaInfo(metaFileParam);
+        Map<String, Map<String, String>> idMap = loadKeyMetaInfo(metaFileParam);
+
+        RequestParameter importCountFile = paramMap.getValue(Constants.TO_IMPORT_FILE);
+        List<Integer> toImportActivity = loadSkippedMetaInfo(importCountFile);
 
         //read exported data
         RequestParameter dataFile = paramMap.getValue(Constants.DATA_FILE);
@@ -58,7 +62,7 @@ public class ActivityImportServlet extends UGCImport {
                     ? json.optJSONArray(Constants.ACTIVITIES)
                     : new JSONArray();
 
-            importUGC(activities,streamProvider, activityManager, idMap, start);
+            importUGC(activities,streamProvider, activityManager, idMap, toImportActivity, start, "Activities");
         } catch (Exception e) {
             logger.error("Error during activity import", e);
         }

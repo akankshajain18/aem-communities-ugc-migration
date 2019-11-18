@@ -16,6 +16,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
+import java.util.List;
 import java.util.Map;
 
 @Component(label = "UGC Migration Notification Importer",
@@ -41,7 +42,10 @@ public class NotificationImportServlet extends  UGCImport {
 
         //read meta data
         RequestParameter metaFileParam = paramMap.getValue(Constants.ID_MAPPING_FILE);
-        Map<String, Map<String,String>> idMap = loadMetaInfo(metaFileParam);
+        Map<String, Map<String,String>> idMap = loadKeyMetaInfo(metaFileParam);
+
+        RequestParameter importCountFile = paramMap.getValue(Constants.TO_IMPORT_FILE);
+        List<Integer> toImportNoti = loadSkippedMetaInfo(importCountFile);
 
         //read exported data
         RequestParameter dataFile = paramMap.getValue(Constants.DATA_FILE);
@@ -57,9 +61,9 @@ public class NotificationImportServlet extends  UGCImport {
                     ? json.optJSONArray(Constants.NOTIFICATION)
                     : new JSONArray();
 
-            importUGC(notifications, streamProvider, activityManager, idMap, start);
+            importUGC(notifications, streamProvider, activityManager, idMap, toImportNoti, start, "NotificationMeta");
         } catch (Exception e) {
-            logger.error("Error during notification import", e);
+            logger.error("Error during notification import", e.getCause());
         }
     }
 

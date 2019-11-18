@@ -83,7 +83,7 @@ public class SocialGraphImportServlet extends  UGCImport {
         try {
             RequestParameterMap paramMap = request.getRequestParameterMap();
             RequestParameter metaFileParam = paramMap.getValue(Constants.ID_MAPPING_FILE);
-            keyValueMap = loadMetaInfo(metaFileParam);
+            keyValueMap = loadKeyMetaInfo(metaFileParam);
         }catch(Exception e){
             logger.error("error occured while computing keyvalue map",e);
         }

@@ -11,7 +11,6 @@
  **************************************************************************/
 package com.adobe.communities.ugc.migration.export;
 
-import com.adobe.communities.ugc.migration.util.Constants;
 import com.adobe.cq.social.graph.SocialGraph;
 import com.adobe.cq.social.graph.Vertex;
 import com.adobe.granite.socialgraph.Direction;
@@ -79,12 +78,11 @@ public class SocialGraphExportServlet extends SlingSafeMethodsServlet {
         }
         if(relType == null){
         	logger.error("relType parameters us not present. Exiting");
-        	throw new ServletException("relType parameters us not present. Exiting");
+        	throw new ServletException("relType parameters is not present. Exiting");
         }else if(typeS ==null){
             logger.error("typeS parameters us not present. Exiting");
             throw new ServletException("parameters typeS not present. Exiting");
         }
-
 
         final Resource userRoot = request.getResourceResolver().getResource(path);
         if (null == userRoot) {
@@ -108,8 +106,6 @@ public class SocialGraphExportServlet extends SlingSafeMethodsServlet {
 
             FileOutputStream fos = new FileOutputStream(outFile);
             BufferedOutputStream bos = new BufferedOutputStream(fos);
-            //loadMap(request) ;
-
 
             OutputStream outStream = null;
             InputStream inStream = null;
