@@ -14,7 +14,7 @@ public class Constants {
     public static final String DATA_FILE = "data";
     public static final String TO_IMPORT_FILE = "toImport";
 
-    public static  final String START = "start";
+    public static  final String OFFSET = "offset";
 
     public static String ACTIVITY_STREAM_PATH = "/content/sites/activitystreams";
     public static String ACTIVITY_STREAM_NAME = "community";

@@ -51,7 +51,7 @@ public class NotificationImportServlet extends  UGCImport {
         RequestParameter dataFile = paramMap.getValue(Constants.DATA_FILE);
         String jsonBody = loadData(dataFile);
 
-        RequestParameter startParam = paramMap.getValue(Constants.START);
+        RequestParameter startParam = paramMap.getValue(Constants.OFFSET);
         final int start  = startParam !=null ?Integer.parseInt(startParam.getString()):0;
 
         JSONObject json;

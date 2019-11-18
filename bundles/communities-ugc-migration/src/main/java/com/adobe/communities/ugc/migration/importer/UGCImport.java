@@ -5,6 +5,7 @@ import com.adobe.cq.social.activitystreams.api.SocialActivityManager;
 import com.adobe.cq.social.activitystreams.listener.api.ActivityStreamProvider;
 import com.adobe.granite.activitystreams.Activity;
 import com.adobe.granite.activitystreams.ActivityException;
+import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.sling.api.request.RequestParameter;
@@ -132,13 +133,14 @@ public abstract class  UGCImport extends SlingAllMethodsServlet {
                     if(values.length >=2) {
                         valuesMap.put(Constants.NEW_ID, values[0]);
                         valuesMap.put(Constants.ENTITY_URL, values[1]);
-                        valuesMap.put(Constants.REFERER, values[2]);
+                        //TODO : for testing
+                        //valuesMap.put(Constants.REFERER, values[2]);
                         idMap.put(keyValues[0], valuesMap);
                     }
                 }
             }
         }catch(Exception e){
-            logger.error("Unable to load meta file",e);
+            logger.error("Unable to load keys mapping",e);
         }finally {
             if(br != null)
                 IOUtils.closeQuietly(br);
@@ -169,7 +171,7 @@ public abstract class  UGCImport extends SlingAllMethodsServlet {
                 }
             }
         }catch(Exception e){
-            logger.error("Unable to load meta file",e);
+            logger.error("Unable to load skipped items ",e);
         }finally {
             if(br != null)
                 IOUtils.closeQuietly(br);
@@ -185,22 +187,23 @@ public abstract class  UGCImport extends SlingAllMethodsServlet {
 
     void importUGC(JSONArray activities, ActivityStreamProvider streamProvider, SocialActivityManager activityManager, Map<String, Map<String, String>> idMap, List<Integer> importInfo, int start, String filename) {
 
-        int toStart = start;
+        int offset =  start;
         int skipped = 0;
         int processedCount  =0;
 
-        FileWriter filewriter = null;
-        BufferedWriter bufferedWriter = null;
-        try {
-            filewriter = new FileWriter(Constants.SKIPPED + filename +".txt");
-            bufferedWriter = new BufferedWriter(filewriter);
+        //maintain skipped item in current processing
+        ArrayList<Integer> skippedItem = new ArrayList<Integer>();
 
-            for (; toStart < activities.length(); toStart++) {
+        File file = null;
+        try {
+            file  = new File(Constants.SKIPPED + filename +".txt");
+
+            for (int current = 0; current < activities.length(); current++) {
 
                 //process when, either skippedlist is empty(fresh import) or data skipped in previous import
-                if(importInfo.isEmpty() || importInfo.contains(toStart)) {
+                if((importInfo.isEmpty() && (current >= offset)) || importInfo.contains(current)) {
                     processedCount++;
-                    JSONObject activityJson = activities.getJSONObject(toStart);
+                    JSONObject activityJson = activities.getJSONObject(current);
                     JSONObject updatedJson = getUpdateJsonObjectWithNewIDs(idMap, activityJson);
                     if (updatedJson != null) {
                         final Activity activity = activityManager.newActivity(updatedJson);
@@ -213,26 +216,24 @@ public abstract class  UGCImport extends SlingAllMethodsServlet {
                         }
                     } else {
                         logger.warn("[Skipped] Either below activity[{}] data is incomplete or corresponding UGC is not imported, Hence ignoring it \n", activityJson);
-                        bufferedWriter.write(toStart + "");
-                        bufferedWriter.newLine();
+                        skippedItem.add(current);
                         skipped++;
                     }
 
-                    importInfo.remove(toStart);
+                    if(!importInfo.isEmpty())
+                    importInfo.remove((Integer)current);
                 }
             }
-        } catch (IOException e) {
-            e.printStackTrace();
         } catch (Exception e) {
             throw new ActivityException("error during import", e);
         } finally {
-            if(bufferedWriter != null) {
-                IOUtils.closeQuietly(bufferedWriter);
+            try{
+                FileUtils.writeLines(file,  skippedItem);
+            } catch (IOException e) {
+                e.printStackTrace();
             }
-            if(filewriter != null){
-                IOUtils.closeQuietly(filewriter);
-            }
-            logger.info("Activity import metrics[Start: {}, end: {}, imported: {}, skipped: {}]", start, toStart, (processedCount - skipped), skipped);
+
+            logger.info("Activity import metrics[Total imports: {}, skipped: {}, next iteration offset: {}]", (processedCount - skipped), skipped, ((offset + processedCount) > activities.length()) ? activities.length() : (offset+ processedCount));
         }
 
     }
