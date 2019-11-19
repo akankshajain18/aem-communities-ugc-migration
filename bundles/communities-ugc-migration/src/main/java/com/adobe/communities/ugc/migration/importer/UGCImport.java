@@ -87,7 +87,7 @@ public abstract class  UGCImport extends SlingAllMethodsServlet {
             return jsonObject;
 
         } catch (Exception e) {
-            logger.error("Unable to map ids during import[{}]",e, jsonObject);
+            logger.error("Unable to map ids during import[{}] \n {}",jsonObject, e);
             throw new ActivityException("error during import", e);
         }
     }
@@ -127,14 +127,15 @@ public abstract class  UGCImport extends SlingAllMethodsServlet {
                 String line;
                 while ((line = br.readLine()) != null) {
                     String[] keyValues = line.split("=");
-                    String values[] = keyValues[1].split(",") ;
+                    String[] values = keyValues[1].split(",") ;
 
-                    Map<String,String> valuesMap = new HashMap<String, String>()  ;
+                    Map<String,String> valuesMap = new HashMap<String, String>();
                     if(values.length >=2) {
                         valuesMap.put(Constants.NEW_ID, values[0]);
                         valuesMap.put(Constants.ENTITY_URL, values[1]);
                         //TODO : for testing
-                        //valuesMap.put(Constants.REFERER, values[2]);
+                        if(values.length > 2)
+                            valuesMap.put(Constants.REFERER, values[2]);
                         idMap.put(keyValues[0], valuesMap);
                     }
                 }
@@ -185,9 +186,8 @@ public abstract class  UGCImport extends SlingAllMethodsServlet {
         return toImport;
     }
 
-    void importUGC(JSONArray activities, ActivityStreamProvider streamProvider, SocialActivityManager activityManager, Map<String, Map<String, String>> idMap, List<Integer> importInfo, int start, String filename) {
+    void importUGC(JSONArray activities, ActivityStreamProvider streamProvider, SocialActivityManager activityManager, Map<String, Map<String, String>> idMap, List<Integer> importInfo, int offset, String filename) {
 
-        int offset =  start;
         int skipped = 0;
         int processedCount  =0;
 
@@ -250,9 +250,5 @@ public abstract class  UGCImport extends SlingAllMethodsServlet {
             str = str.substring(index);
         }
         return str;
-    }
-
-    private void updateSkip(){
-
     }
 }
