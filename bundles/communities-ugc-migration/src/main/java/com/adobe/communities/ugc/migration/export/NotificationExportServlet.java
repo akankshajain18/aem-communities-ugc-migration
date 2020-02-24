@@ -12,9 +12,11 @@ import com.adobe.cq.social.ugcbase.SocialUtils;
 import com.adobe.granite.activitystreams.Activity;
 import org.apache.commons.io.IOUtils;
 import org.apache.felix.scr.annotations.*;
+import org.apache.felix.scr.annotations.Properties;
 import org.apache.sling.api.SlingHttpServletRequest;
 import org.apache.sling.api.SlingHttpServletResponse;
 import org.apache.sling.api.resource.ResourceResolver;
+import org.apache.sling.api.resource.ValueMap;
 import org.apache.sling.api.servlets.SlingAllMethodsServlet;
 import org.apache.sling.commons.json.io.JSONWriter;
 import org.slf4j.Logger;
@@ -26,9 +28,9 @@ import javax.jcr.Session;
 import javax.jcr.query.Query;
 import javax.servlet.ServletException;
 import java.io.*;
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
+import java.util.*;
 
 
 @Component(label = "UGC Exporter for All UGC Data",
@@ -53,7 +55,7 @@ public class NotificationExportServlet extends SlingAllMethodsServlet {
 
         File outFile = null ;
         try {
-            outFile = File.createTempFile(Constants.NOTIFICATION, ".json");
+            outFile = File.createTempFile(Constants.NOTIFICATIONS, ".json");
             if (!outFile.canWrite()) {
                 throw new ServletException("Cannot write to specified output file");
             }
@@ -113,7 +115,7 @@ public class NotificationExportServlet extends SlingAllMethodsServlet {
             JSONWriter jsonWriter = new JSONWriter(responseWriter);
             jsonWriter.setTidy(true);
             jsonWriter.object() ;
-            jsonWriter.key(Constants.NOTIFICATION);
+            jsonWriter.key(Constants.NOTIFICATIONS);
             jsonWriter.array() ;
 
             for(String user : users) {
@@ -135,9 +137,30 @@ public class NotificationExportServlet extends SlingAllMethodsServlet {
 
                         if (stream != null) {
                             logger.info("reading notification for user = {} from offset= {}  with fetchCount = {}" ,user,offset, fetchCount);
+
+                            DateFormat format = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSXXX");
+                            format.setTimeZone(TimeZone.getDefault());
+
                             for (Activity a : stream.getActivities(offset, fetchCount, filter)) {
                                 readCount++;
                                 if (a != null) {
+                                    if(a.getProperties() != null) {
+                                        //mainly required for tally related activities
+                                        Long publishTime = (Long) a.getProperties().get(Constants.PUBLISHED);
+                                        if (publishTime == null) {
+                                            //added property will be present always
+                                            publishTime = (Long) a.getProperties().get(Constants.ADDED);
+                                        }
+                                        Date date = new Date(publishTime);
+                                        String dateTime = format.format(date);
+
+                                        if (a.getObject() != null) {
+                                            ValueMap prop = a.getObject().getProperties();
+                                            if (prop != null) prop.put(Constants.PUBLISHDATE, dateTime);
+                                            prop.put(Constants.TONOTIFY, user);
+
+                                        }
+                                    }
                                     jsonWriter.value(a.toJSON());
                                 }
                             }

@@ -13,6 +13,7 @@ package com.adobe.communities.ugc.migration.export;
 
 
 import com.adobe.communities.ugc.migration.ContentTypeDefinitions;
+import com.adobe.communities.ugc.migration.util.Constants;
 import com.adobe.cq.social.calendar.client.api.Calendar;
 import com.adobe.cq.social.commons.CommentSystem;
 import com.adobe.cq.social.commons.comments.api.Comment;
@@ -243,7 +244,7 @@ public class GenericExportServlet extends SlingSafeMethodsServlet {
             responseWriter = new OutputStreamWriter(zip);
             zip.putNextEntry(new ZipEntry("key.txt"));
             for (Map.Entry<String, String> entry : keyValueMap.entrySet()) {
-                responseWriter.append(entry.getKey() + "=" + entry.getValue() + "\n");
+                responseWriter.append(entry.getKey() + Constants.KEY_SPLITTER + entry.getValue() + "\n");
             }
             responseWriter.flush();
             zip.closeEntry();

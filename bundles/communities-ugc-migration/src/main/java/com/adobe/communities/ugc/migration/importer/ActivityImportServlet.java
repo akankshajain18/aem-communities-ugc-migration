@@ -10,11 +10,14 @@ import org.apache.sling.api.SlingHttpServletRequest;
 import org.apache.sling.api.SlingHttpServletResponse;
 import org.apache.sling.api.request.RequestParameter;
 import org.apache.sling.api.request.RequestParameterMap;
+import org.apache.sling.api.resource.ResourceResolver;
+import org.apache.sling.api.resource.ResourceResolverFactory;
 import org.apache.sling.commons.json.JSONArray;
 import org.apache.sling.commons.json.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import javax.servlet.ServletException;
 import java.util.List;
 import java.util.Map;
 
@@ -26,6 +29,9 @@ import java.util.Map;
 public class ActivityImportServlet extends UGCImport {
 
     @Reference
+    private ResourceResolverFactory rrf;
+
+    @Reference
     private SocialActivityManager activityManager;
 
     @Reference(target = "(component.name=com.adobe.cq.social.activitystreams.listener.impl.ResourceActivityStreamProviderFactory)")
@@ -33,7 +39,11 @@ public class ActivityImportServlet extends UGCImport {
 
     private static final Logger logger = LoggerFactory.getLogger(ActivityImportServlet.class);
 
-    protected void doPost( final SlingHttpServletRequest request, final SlingHttpServletResponse response){
+    protected void doPost( final SlingHttpServletRequest request, final SlingHttpServletResponse response) throws ServletException {
+
+        //allowed only if user is admin
+        final ResourceResolver resolver = request.getResourceResolver();
+        UGCImportHelper.checkUserPrivileges(resolver, rrf);
 
         RequestParameterMap paramMap = request.getRequestParameterMap();
 
@@ -45,8 +55,7 @@ public class ActivityImportServlet extends UGCImport {
         RequestParameter metaFileParam = paramMap.getValue(Constants.ID_MAPPING_FILE);
         Map<String, Map<String, String>> idMap = loadKeyMetaInfo(metaFileParam);
 
-        RequestParameter importCountFile = paramMap.getValue(Constants.TO_IMPORT_FILE);
-        List<Integer> toImportActivity = loadSkippedMetaInfo(importCountFile);
+         List<Integer> toImportActivity = loadSkippedMetaInfo(Constants.SKIPPED_ACTIVITY);
 
         //read exported data
         RequestParameter dataFile = paramMap.getValue(Constants.DATA_FILE);
@@ -62,7 +71,7 @@ public class ActivityImportServlet extends UGCImport {
                     ? json.optJSONArray(Constants.ACTIVITIES)
                     : new JSONArray();
 
-            importUGC(activities,streamProvider, activityManager, idMap, toImportActivity, start, "Activities");
+            importUGC(activities,streamProvider, activityManager, idMap, toImportActivity, start, Constants.SKIPPED_ACTIVITY, resolver);
         } catch (Exception e) {
             logger.error("Error during activity import", e);
         }

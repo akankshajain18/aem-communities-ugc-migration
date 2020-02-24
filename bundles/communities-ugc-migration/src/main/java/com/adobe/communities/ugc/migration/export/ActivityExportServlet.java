@@ -10,6 +10,7 @@ import org.apache.sling.api.SlingHttpServletRequest;
 import org.apache.sling.api.SlingHttpServletResponse;
 import org.apache.sling.api.resource.Resource;
 import org.apache.sling.api.resource.ResourceResolver;
+import org.apache.sling.api.resource.ValueMap;
 import org.apache.sling.api.servlets.SlingAllMethodsServlet;
 import org.apache.sling.commons.json.JSONException;
 import org.apache.sling.commons.json.io.JSONWriter;
@@ -18,6 +19,10 @@ import org.slf4j.LoggerFactory;
 
 import javax.servlet.ServletException;
 import java.io.*;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
+import java.util.Date;
+import java.util.TimeZone;
 
 
 @Component(label = "UGC Exporter for activity Data",
@@ -109,23 +114,42 @@ public class ActivityExportServlet extends SlingAllMethodsServlet {
                         readCount = 0;
                         int offset = fetchCount * index;
                         logger.info("reading from offset= {} with fetchCount = {}", offset, fetchCount);
+
+                        DateFormat format = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSXXX");
+                        format.setTimeZone(TimeZone.getDefault());
+
                         for (Activity a : stream.getActivities(offset, fetchCount)) {
                             if(a != null) {
-                                readCount++ ;
-                                jsonWriter.value(a.toJSON());
+                                if(a.getProperties() != null) {
+                                    //mainly required for tally related activities
+                                    Long publishTime = (Long)a.getProperties().get(Constants.PUBLISHED);
+                                    if(publishTime == null){
+                                        //added property will be present always
+                                        publishTime = (Long)a.getProperties().get(Constants.ADDED);
+                                    }
+                                    Date date = new Date(publishTime);
+                                    String dateTime = format.format(date);
+
+                                    if(a.getObject() != null) {
+                                        ValueMap prop = a.getObject().getProperties();
+                                        if(prop != null) prop.put(Constants.PUBLISHDATE, dateTime);
+                                    }
+
+                                    readCount++ ;
+                                    jsonWriter.value(a.toJSON());
+                                }
                             }
-                        }
-                        logger.info("read successfully from offset= {} with fetchCount = {}", offset, fetchCount);
-                        index++;
-                    } while (readCount.compareTo(fetchCount) == 0);
+                            logger.info("read successfully from offset= {} with fetchCount = {}", offset, fetchCount);
+                            index++;
+                        } }while (readCount.compareTo(fetchCount) == 0);
 
                     jsonWriter.endArray();
                     jsonWriter.endObject();
                     responseWriter.flush();
                 } catch (JSONException e) {
-                    logger.error("json exception occured while fetching activites from stream ", e);
+                    logger.error("json exception occurred while fetching activities from stream ", e);
                 }catch(Exception e){
-                    logger.error("exception occured while fetching activites from stream ", e);
+                    logger.error("exception occurred while fetching activities from stream ", e);
                 }
             }else{
                 logger.error("stream object is null while exporting activity");
